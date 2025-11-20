@@ -62,3 +62,4 @@ function initChat(userId){
         if(e.key==="Enter") document.getElementById("sendBtn").click();
     });
 }
+
