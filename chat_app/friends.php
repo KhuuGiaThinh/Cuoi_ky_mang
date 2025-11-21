@@ -364,14 +364,19 @@ function loadFriends(){
 
             let div = document.createElement("div");
             div.className = "item";
+
             div.innerHTML = `
                 <span>${f.ten_khach_hang}</span>
-                <button onclick="location.href='chat.php?id=${f.friend_id}'">Chat</button>
+                <button onclick="localStorage.setItem('chat_with', ${f.friend_id}); location.href='chat.php';">
+                    Chat
+                </button>
             `;
+
             friendsList.appendChild(div);
         });
     });
 }
+
 
 // ---- LOAD MẶC ĐỊNH ----
 loadRequestsReceived();
