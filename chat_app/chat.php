@@ -173,7 +173,7 @@ function startChatPolling(to_id){
 
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         });
-    }, 1000); 
+    }, 500); 
 }
     function loadHistory(to_id){
         fetch(`chat.php?action=history&to_id=${to_id}`)

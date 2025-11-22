@@ -31,20 +31,48 @@ if(isset($_GET['action'])){
     }
 
     // 2. Gửi yêu cầu kết bạn
-    if($_GET['action']=='send_request' && isset($_GET['to'])){
-        $to=intval($_GET['to']);
-        if($to && $to!=$user_id){
-            $stmt = $conn->prepare("
-                INSERT IGNORE INTO yeu_cau_ket_ban 
-                (nguoi_gui, nguoi_nhan, trang_thai, ngay_gui) 
+   // 2. Gửi yêu cầu kết bạn (mới)
+if($_GET['action']=='send_request' && isset($_GET['to'])){
+    $to = intval($_GET['to']);
+    if($to && $to != $user_id){
+        // Kiểm tra xem đã tồn tại yêu cầu chưa
+        $stmt = $conn->prepare("
+            SELECT id, trang_thai FROM yeu_cau_ket_ban 
+            WHERE nguoi_gui=? AND nguoi_nhan=?
+        ");
+        $stmt->bind_param("ii", $user_id, $to);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        if($row = $res->fetch_assoc()){
+            if($row['trang_thai'] == 2){
+                // Nếu trước đây bị từ chối, cập nhật lại trạng thái
+                $stmt2 = $conn->prepare("
+                    UPDATE yeu_cau_ket_ban 
+                    SET trang_thai=0, ngay_gui=NOW() 
+                    WHERE id=?
+                ");
+                $stmt2->bind_param("i", $row['id']);
+                $stmt2->execute();
+                echo json_encode(['success'=>true]); exit;
+            } else {
+                // Đã gửi hoặc chấp nhận rồi
+                echo json_encode(['success'=>false,'error'=>'Yêu cầu đã tồn tại']); exit;
+            }
+        } else {
+            // Chưa có -> chèn mới
+            $stmt3 = $conn->prepare("
+                INSERT INTO yeu_cau_ket_ban (nguoi_gui, nguoi_nhan, trang_thai, ngay_gui)
                 VALUES (?, ?, 0, NOW())
             ");
-            $stmt->bind_param("ii",$user_id,$to);
-            $stmt->execute();
+            $stmt3->bind_param("ii", $user_id, $to);
+            $stmt3->execute();
             echo json_encode(['success'=>true]); exit;
         }
-        echo json_encode(['success'=>false]); exit;
     }
+    echo json_encode(['success'=>false]); exit;
+}
+
 
     // 3. Yêu cầu đến
     if($_GET['action']=='requests_received'){
@@ -320,7 +348,7 @@ function loadRequestsReceived(){
         });
     });
 }
-
+setInterval(loadRequestsReceived, 500);
 // ---- YÊU CẦU ĐÃ GỬI ----
 function loadRequestsSent(){
     fetch('?action=requests_sent')
@@ -339,6 +367,8 @@ function loadRequestsSent(){
         });
     });
 }
+// ---- POLLING: tự động load yêu cầu đã gửi mỗi 3 giây ----
+setInterval(loadRequestsSent, 500);
 
 // ---- CHẤP NHẬN / TỪ CHỐI ----
 function respondRequest(id,resp){
